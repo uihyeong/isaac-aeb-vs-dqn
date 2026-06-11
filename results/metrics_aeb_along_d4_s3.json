@@ -1,0 +1,14 @@
+{
+  "tag": "aeb",
+  "success": true,
+  "time_to_goal": 62.35,
+  "path_length": 62.41,
+  "n_collision": 1,
+  "n_wall_collision": 0,
+  "n_person_collision": 1,
+  "min_clearance": 0.064,
+  "wedged": false,
+  "n_stall": 0,
+  "max_stall_sec": 1.7,
+  "n_estop": 6
+}

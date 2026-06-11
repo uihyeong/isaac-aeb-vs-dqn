@@ -1,0 +1,14 @@
+{
+  "tag": "dqn",
+  "success": true,
+  "time_to_goal": 54.45,
+  "path_length": 65.51,
+  "n_collision": 1,
+  "n_wall_collision": 0,
+  "n_person_collision": 1,
+  "min_clearance": 0.054,
+  "wedged": false,
+  "n_stall": 0,
+  "max_stall_sec": 2.9,
+  "n_estop": 0
+}
