@@ -23,9 +23,11 @@ python3 /home/sejong/isaac_aeb/metrics_node.py --ros-args \
 MPID=$!
 sleep 1
 
-# 3) 컨트롤러
+# 3) 컨트롤러  (dqn / pursuit=회피없는 대조군 / aeb)
 if [ "$MODE" = "dqn" ]; then
     /home/sejong/grid_nav/venv/bin/python /home/sejong/isaac_aeb/dqn_drive.py >/tmp/measure_ctrl.log 2>&1 &
+elif [ "$MODE" = "pursuit" ]; then
+    PURSUIT_ONLY=1 /home/sejong/grid_nav/venv/bin/python /home/sejong/isaac_aeb/dqn_drive.py >/tmp/measure_ctrl.log 2>&1 &
 else
     bash /home/sejong/isaac_aeb/run_aeb.sh >/tmp/measure_ctrl.log 2>&1 &
 fi

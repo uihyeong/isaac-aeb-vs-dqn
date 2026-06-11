@@ -1,0 +1,14 @@
+{
+  "tag": "pursuit",
+  "success": true,
+  "time_to_goal": 51.3,
+  "path_length": 64.47,
+  "n_collision": 1,
+  "n_wall_collision": 0,
+  "n_person_collision": 1,
+  "min_clearance": 0.067,
+  "wedged": false,
+  "n_stall": 0,
+  "max_stall_sec": 2.0,
+  "n_estop": 0
+}

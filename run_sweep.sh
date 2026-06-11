@@ -41,7 +41,7 @@ for D in $DENSITIES; do
   setsid python3 /home/sejong/isaac_aeb/cmdvel_to_file.py >/tmp/bridge.log 2>&1 </dev/null & disown
   sleep 3
   for S in $(seq 1 $NSEED); do
-    for M in aeb dqn; do
+    for M in ${MODES:-aeb dqn}; do
       TAG="${SWEEP_TAG}d${D}_s${S}"
       R=$(bash /home/sejong/isaac_aeb/run_measure.sh $M $S $S "$TAG" 2>&1 | tail -1)
       J=/home/sejong/isaac_aeb/results/metrics_${M}_${TAG}.json

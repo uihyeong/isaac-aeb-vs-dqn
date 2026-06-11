@@ -45,6 +45,7 @@ DECISION_DT = 0.6            # DQN 재결정 간격(s)
 DODGE_DIST = 0.7            # DQN 측면 회피 시 캐럿 수직 오프셋(m)
 LOOKAHEAD_DIST = 1.3        # pure-pursuit 전방 주시 거리(m) > 회전반경(~0.7m)
 MODEL = os.path.expanduser("~/grid_nav/best_model.zip")
+PURSUIT_ONLY = os.environ.get("PURSUIT_ONLY", "0") == "1"  # 1=회피 끄고 순수 경로추종(대조군)
 
 
 class DQNDrive(Node):
@@ -61,8 +62,12 @@ class DQNDrive(Node):
         self.sub2_cell = env.sub2_cell
         self.goal_cell = env.goal_cell
 
-        self.model = DQN.load(MODEL, device="cpu")
-        self.get_logger().info(f"DQN 로드: {MODEL}")
+        if PURSUIT_ONLY:
+            self.model = None
+            self.get_logger().info("PURSUIT_ONLY 모드: 회피 없이 순수 경로추종 (대조군)")
+        else:
+            self.model = DQN.load(MODEL, device="cpu")
+            self.get_logger().info(f"DQN 로드: {MODEL}")
 
         self.buf = Buffer()
         self.tfl = TransformListener(self.buf, self)
@@ -180,19 +185,7 @@ class DQNDrive(Node):
         if not self.sub2_done and self.cell_close((rcx, rcy), self.sub2_cell):
             self.sub2_done = True
             self.get_logger().info("sub2(point3) 통과")
-        # 동적 장애물 셀
-        now_cells = self.dynamic_cells(x, y, yaw, rcx, rcy)
-        obs = self.build_obs(rcx, rcy, now_cells)
-        self.obs_prev_cells = list(now_cells)
-        action, _ = self.model.predict(obs, deterministic=True)
-        dx, dy = ACTIONS[int(action)]
-        idx = min(self.path_progress + LOOKAHEAD, len(self.path) - 1)
-        tgt = self.path[idx]
-        self.get_logger().info(
-            f"cell=({rcx},{rcy}) act={int(action)}({dx},{dy}) prog={self.path_progress} "
-            f"pathTgtCell={tgt} nObs={len(now_cells)}")
-        # ── 하이브리드: 안정적 경로 캐럿(pure-pursuit) + DQN 회피 변조 ──
-        # 캐럿: 로봇에서 직선거리 ≥ LOOKAHEAD_DIST 인 첫 경로점 (회전반경 안에 들어와 공전하는 것 방지)
+        # ── 경로 캐럿(pure-pursuit): 로봇에서 직선거리 ≥ LOOKAHEAD_DIST 인 첫 경로점 ──
         rpos = np.array([x, y])
         cidx = self.path_progress
         while cidx < len(self.path) - 1:
@@ -201,10 +194,24 @@ class DQNDrive(Node):
                 break
             cidx += 1
         carrot = np.array(self.cell_to_world(*self.path[cidx]), dtype=float)
-        # 경로 진행 방향(world)
-        pdir = carrot - np.array([x, y])
+        pdir = carrot - rpos
         nrm = np.linalg.norm(pdir)
         pdir = pdir / nrm if nrm > 1e-6 else np.array([math.cos(yaw), math.sin(yaw)])
+
+        # ── 대조군: 회피 없이 경로만 추종 ──
+        if PURSUIT_ONLY:
+            self.stop_cmd = False
+            self.target_world = tuple(carrot)
+            return
+
+        # ── DQN 회피: 동적 장애물 셀 → 격자관측 → 정책 ──
+        now_cells = self.dynamic_cells(x, y, yaw, rcx, rcy)
+        obs = self.build_obs(rcx, rcy, now_cells)
+        self.obs_prev_cells = list(now_cells)
+        action, _ = self.model.predict(obs, deterministic=True)
+        dx, dy = ACTIONS[int(action)]
+        self.get_logger().info(
+            f"cell=({rcx},{rcy}) act={int(action)}({dx},{dy}) prog={self.path_progress} nObs={len(now_cells)}")
 
         if (dx, dy) == (0, 0) and len(now_cells) > 0:
             # DQN 정지 = 장애물 회피 대기
