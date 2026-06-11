@@ -133,12 +133,13 @@ Isaac에서 로봇을 cmd_vel대로 움직이는 데 핵심 난관이 있었음:
 - **자동 측정 파이프라인 완성·동작** (위 표 6회 run 모두 metrics_node.py가 정상 JSON 산출).
   - anti-orbit 가드(dqn_drive.py: 4s 순변위<0.4m → 경로직진 2.5s) 추가로 DQN 공전·NaN 해소.
   - kinematic RigidPrim 방식으로 TF 동기·NaN 모두 해결(아래 §4).
-- **남은 보강(통계 강화)**:
-  1. 밀집도/시드별 **N회 더** 수집 → 평균±표준편차 곡선 (현재 5명 n=2, 2명 n=1).
-  2. **장애물을 경로 교차형으로** 배치(현재 경로 동행형) → AEB E-stop·충돌 더 부각 가능.
-  3. 사람 속도↑ 또는 7~10명 등 더 어려운 시나리오에서 충돌률 차이 유도.
-- **환경 제약**: 디스크 96%(여유 ~5G)라 장시간 다회 실행 시 간헐 쓰기 실패 가능 → 캐시 정리 권장.
-- 도구: `run_measure.sh`(단일 측정), `metrics_node.py`(지표), `aeb_scene.py`(AEB_NUM_PEOPLE/SEED 환경변수로 밀집도·배치 제어).
+- **완료된 통계 강화**: 동행형 2·4·6·8명 × 5 seed(§1), 교차형 2~10명 × 3~5 seed(§1.5) → mean±std 확보.
+- **다음 작업**:
+  1. **pure-pursuit 단독 대조군** — DQN=pursuit+RL이라 "매끄러움이 RL 덕인지" 분리 필요 (최우선).
+  2. **혼합 트래픽**(동행+교차) + 통계 유의성 검정(p-value).
+  3. DQN 교차형 재학습 시 교차 시나리오 성능 향상 기대.
+- **환경 제약**: 디스크 96%라 장시간 다회 실행 시 간헐 쓰기 실패 가능 → 캐시 정리 권장.
+- 도구: `run_measure.sh`(단일), `run_sweep.sh`(밀집도×시드 스윕), `metrics_node.py`(지표), `aeb_scene.py`(AEB_NUM_PEOPLE/SEED/OBSTACLE_MODE/PERSON_SPEED/CROSS_HALF 환경변수).
 
 ---
 
