@@ -41,6 +41,8 @@ class Metrics(Node):
         self.tag = self.declare_parameter("tag", "RUN").value
         self.out = self.declare_parameter("out", "/tmp/metrics.json").value
         self.timeout = float(self.declare_parameter("timeout", 240.0).value)
+        self.csv = self.declare_parameter("csv", "").value   # per-step (전방거리,명령속도) 로깅
+        self.csv_rows = []                                    # (t, front_dist, vcmd, min_dist)
 
         # 벽 맵 로드 (충돌 분류용)
         pgm = cv2.imread(PGM_PATH, cv2.IMREAD_GRAYSCALE)
@@ -52,6 +54,9 @@ class Metrics(Node):
         self.tfl = TransformListener(self.buf, self)
         self.create_subscription(LaserScan, "/scan", self.on_scan, qos_profile_sensor_data)
         self.create_subscription(Bool, "/scout_mini/e_stop", self.on_estop, 10)
+        from geometry_msgs.msg import Twist
+        self.last_vcmd = 0.0
+        self.create_subscription(Twist, "/cmd_vel", self.on_cmdvel, 10)   # 파일대신 토픽(충돌 방지)
 
         # 상태
         self.scan = None
@@ -97,6 +102,34 @@ class Metrics(Node):
                          1 - 2 * (q.y * q.y + q.z * q.z))
         return t.x, t.y, yaw
 
+    def _front_dist(self):
+        """로봇 전방 ±20° 콘 내 최소 scan 거리(전방 장애물거리). 라이다 후방장착(LASER_YAW) 보정."""
+        if self.scan is None:
+            return None
+        s = self.scan
+        r = np.array(s.ranges, dtype=np.float32)
+        n = len(r)
+        ang = s.angle_min + np.arange(n) * s.angle_increment
+        rob = np.arctan2(np.sin(LASER_YAW + ang), np.cos(LASER_YAW + ang))  # 로봇프레임 빔방향
+        front = np.abs(rob) < math.radians(20)
+        valid = front & np.isfinite(r) & (r >= s.range_min) & (r <= s.range_max)
+        return float(r[valid].min()) if valid.any() else None
+
+    def _flush_csv(self):
+        try:
+            with open(self.csv, "w") as f:
+                f.write("t,front_dist,vcmd\n")
+                for row in self.csv_rows:
+                    f.write(",".join(map(str, row)) + "\n")
+        except Exception:
+            pass
+
+    def on_cmdvel(self, msg):
+        self.last_vcmd = abs(msg.linear.x)
+
+    def _read_vcmd(self):
+        return self.last_vcmd
+
     def _is_wall(self, wx, wy):
         cx = int(round((wx - self.origin[0]) / PGM_RES))
         cy = int(round(self.h - (wy - self.origin[1]) / PGM_RES))
@@ -118,6 +151,14 @@ class Metrics(Node):
             return
         x, y, yaw = pose
         now = time.time()
+
+        # per-step 로깅 (게인 반응곡선용): 전방거리 vs 명령속도 (정지 포함 위해 t0 무관 기록)
+        if self.csv:
+            fd = self._front_dist(); vc = self._read_vcmd()
+            if fd is not None and vc is not None:
+                self.csv_rows.append((round(now - self.start_wall, 3), round(fd, 3), round(vc, 3)))
+                if len(self.csv_rows) % 40 == 0:      # 주기적 flush (끼임/강제종료 대비)
+                    self._flush_csv()
 
         # 첫 이동 감지 → 타이머 시작
         if self.t0 is None:
@@ -195,6 +236,12 @@ class Metrics(Node):
         if self.done:
             return
         self.done = True
+        if self.csv and self.csv_rows:
+            with open(self.csv, "w") as f:
+                f.write("t,front_dist,vcmd\n")
+                for row in self.csv_rows:
+                    f.write(",".join(map(str, row)) + "\n")
+            self.get_logger().info(f"[metrics:{self.tag}] CSV {len(self.csv_rows)}행 저장: {self.csv}")
         res = {
             "tag": self.tag,
             "success": self.success,

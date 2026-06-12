@@ -100,7 +100,7 @@ DQN 주행 = **경로추종(pursuit) + RL 회피**. 회피를 끈 **pursuit-only
 >
 > → **RL은 "멈추지 않고 미리 피하는" 예측형 회피로, 반응형 규칙기반보다 매끄럽고·빠르고·안전하게 주행한다.**
 
-상세 수치·전체 시나리오(교차형 포함)·분석: [`ISAAC_COMPARISON_RESULTS.md`](ISAAC_COMPARISON_RESULTS.md) · 격자 DQN 학습: [`model/DQN_RESULTS.md`](model/DQN_RESULTS.md)
+상세 수치·전체 시나리오(교차형 포함)·분석: [`ISAAC_COMPARISON_RESULTS.md`](ISAAC_COMPARISON_RESULTS.md) · 격자 DQN 학습: [`model/DQN_RESULTS.md`](model/DQN_RESULTS.md) · **DQN 게인→AEB 이식(스코어·반응곡선)**: [`DQN_GAIN_TO_AEB.md`](DQN_GAIN_TO_AEB.md)
 
 ---
 

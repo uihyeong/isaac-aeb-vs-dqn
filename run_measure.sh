@@ -17,9 +17,11 @@ for t in $(seq 1 50); do [ -f /tmp/robot_ready.txt ] && break; sleep 0.2; done
 sleep 1
 echo "[measure] $MODE $TAGOUT (seed=$SEED): reset done"
 
-# 2) 지표 노드
+# 2) 지표 노드 (METRICS_CSV 설정 시 per-step 반응곡선 로깅)
+CSVARG=""
+[ -n "$METRICS_CSV" ] && CSVARG="-p csv:=$METRICS_CSV"
 python3 /home/sejong/isaac_aeb/metrics_node.py --ros-args \
-    -p tag:="$MODE" -p out:="$OUT" -p timeout:=400.0 >/tmp/measure_metrics.log 2>&1 &
+    -p tag:="$MODE" -p out:="$OUT" -p timeout:=400.0 $CSVARG >/tmp/measure_metrics.log 2>&1 &
 MPID=$!
 sleep 1
 
