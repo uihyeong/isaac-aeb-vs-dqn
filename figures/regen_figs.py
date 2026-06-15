@@ -59,7 +59,7 @@ axL.text(0.5, 22.0, "−15%p", ha="center", va="center",
 axL.set_xticks(range(3)); axL.set_xticklabels(labels, fontsize=11)
 axL.set_ylabel("collision rate (%) — 20 runs", fontsize=11)
 axL.set_ylim(0, 42)
-axL.set_title("RL avoidance halves collisions\nPursuit 35% → DQN 20% (E-stop stays 0)", fontsize=12)
+axL.set_title("RL cuts collisions by 15%p (35→20%)\nPursuit 35% → DQN 20% (E-stop stays 0)", fontsize=12)
 axL.grid(axis="y", alpha=0.25)
 
 # 우: 산점도 (충돌률 vs E-stop), 라벨 안쪽으로
