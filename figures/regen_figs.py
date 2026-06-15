@@ -52,9 +52,10 @@ for i, v in enumerate(coll):
 # 화살표 (pursuit top → DQN top)
 axL.annotate("", xy=(1, 20), xytext=(0, 35),
              arrowprops=dict(arrowstyle="-|>", color="#2e8b3d", lw=2.4))
-# -43% 라벨: 검정색 + 화살표/막대숫자 안 가리게 선 왼쪽 아래 빈 공간
-axL.text(0.32, 25.5, "−43%", ha="center", va="center",
-         fontsize=14, fontweight="bold", color="k")
+# 감소율 라벨: 막대 사이 흰 공간(0.3~0.7)에 흰 박스로 또렷하게. 상대 43%↓ 명시
+axL.text(0.5, 22.0, "−15%p", ha="center", va="center",
+         fontsize=13, fontweight="bold", color="k",
+         bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#2e8b3d", lw=1.2))
 axL.set_xticks(range(3)); axL.set_xticklabels(labels, fontsize=11)
 axL.set_ylabel("collision rate (%) — 20 runs", fontsize=11)
 axL.set_ylim(0, 42)
