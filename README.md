@@ -1,8 +1,17 @@
 # Isaac Sim — 강화학습(DQN) vs 규칙기반(AEB) 동적장애물 회피 비교
 
+![Isaac Sim](https://img.shields.io/badge/Isaac%20Sim-5.1-76B900?logo=nvidia&logoColor=white)
+![ROS2](https://img.shields.io/badge/ROS2-Humble-22314E?logo=ros&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)
+![RL](https://img.shields.io/badge/RL-DQN%20vs%20AEB-EE4C2C)
+
 > 자율주행 택배 로봇 캡스톤의 **AI 기술 평가** 산출물.
 > 같은 Isaac Sim 환경에서 **강화학습(DQN) 회피**가 기존 **규칙기반(AEB+E-stop+장애물회피)** 보다
 > 얼마나 더 나은지 정량 비교한다.
+
+![demo](figures/aeb_sim_topdown.gif)
+
+> ⬆️ Isaac Sim 탑다운: Scout Mini가 동적 장애물(사람) 사이를 주행하는 측정 환경.
 
 ---
 
@@ -27,7 +36,7 @@
 
 ---
 
-## 3. 강화학습(DQN)이란 & 왜 격자셀인가  (방법론)
+## 3. 강화학습(DQN)이란 & 왜 격자셀인가 (방법론)
 
 > PPT용 블록 정리: [`ppt_dqn_slide.md`](ppt_dqn_slide.md)
 
@@ -100,11 +109,36 @@ DQN 주행 = **경로추종(pursuit) + RL 회피**. 회피를 끈 **pursuit-only
 >
 > → **RL은 "멈추지 않고 미리 피하는" 예측형 회피로, 반응형 규칙기반보다 매끄럽고·빠르고·안전하게 주행한다.**
 
-상세 수치·전체 시나리오(교차형 포함)·분석: [`ISAAC_COMPARISON_RESULTS.md`](ISAAC_COMPARISON_RESULTS.md) · 격자 DQN 학습: [`model/DQN_RESULTS.md`](model/DQN_RESULTS.md) · **DQN 게인→AEB 이식(스코어·반응곡선)**: [`DQN_GAIN_TO_AEB.md`](DQN_GAIN_TO_AEB.md)
+상세 수치·전체 시나리오(교차형 포함)·분석: [`ISAAC_COMPARISON_RESULTS.md`](ISAAC_COMPARISON_RESULTS.md) · 격자 DQN 학습: [`model/DQN_RESULTS.md`](model/DQN_RESULTS.md)
 
 ---
 
-## 5. 어떻게 (System & 재현)
+## 5. DQN 게인 → AEB 이식 (배포 다리, 부분 검증)
+
+> 전체 sim2real은 시간상 미실시. **RL이 학습한 회피 거동을 분석해 실제 배포용 AEB 게인으로 이식 가능함을 보이는 부분 검증.** 상세: [`DQN_GAIN_TO_AEB.md`](DQN_GAIN_TO_AEB.md)
+
+| DQN 학습 곡선 | 게인 반응곡선 |
+|---|---|
+| ![score](figures/dqn_score_curve.png) | ![gain](figures/dqn_gain_response_curve.png) |
+
+- **학습:** best 모델 799점(≈93% 성공) @ 510k 스텝에서 저장 (`best_model.zip`)
+- **반응곡선:** DQN은 전방거리 무관 **~0.48 m/s 유지**(미리 옆으로 회피), AEB는 0.8m서 **급정지**
+
+**곡선에서 읽은 게인 → AEB 파라미터:**
+
+| 항목 | AEB 현재 → DQN 기반 | 근거 |
+|---|---|---|
+| `linear_speed` | 0.5 → **0.48** | plateau 직접 이식 |
+| OA `x_max` | 1.5 → **2.5m** | DQN 조기 회피(전방 클리어 유지) |
+| OA `oa_max_omega` | 0.5 → **0.9** | 멈추는 대신 결단력 있는 조향 |
+| OA `y_half` | 0.45 → **0.6m** | 측정된 ~1m 이격 유지 |
+| E-stop `front_max_x` | 0.8 → **0.4m** | 정지 대신 회피 (안전 최소값은 보존) |
+
+→ **"AEB가 멈추는 대신 DQN처럼 미리 옆으로 돌아가게" 만드는 게인 세트.** (실차 적용·검증 = future work)
+
+---
+
+## 6. 어떻게 (System & 재현)
 
 ```
 [Isaac Sim 5.1, py3.11]  aeb_scene.py
@@ -138,7 +172,7 @@ DENSITIES="2 4 6 8" NSEED=5 SWEEP_TAG=along_ AEB_OBSTACLE_MODE=along bash run_sw
 
 ---
 
-## 6. 파일 구조
+## 7. 파일 구조
 
 ```
 aeb_scene.py        Isaac 씬 (벽·로봇·사람·LiDAR·운동학 구동)  ★핵심
@@ -150,15 +184,16 @@ run_sweep.sh        밀집도×시드 스윕 러너
 run_aeb.sh          AEB 4노드 런처
 aeb_nodes/          AEB 원본 ROS2 노드 + waypoints
 model/              best_model.zip(DQN) + grid_nav_env.py + DQN_RESULTS.md
-figures/            결과 그래프 PNG
+figures/            결과 그래프 PNG + 데모 GIF
 results/            측정 JSON 원자료 (밀집도·시드별)
+DQN_GAIN_TO_AEB.md             DQN 게인→AEB 이식 분석 (반응곡선·게인 도출)
 ISAAC_COMPARISON_RESULTS.md   상세 결과·분석·엔지니어링 노트
 ppt_dqn_slide.md              발표용 슬라이드 블록 정리 (DQN 개념·격자셀·실험구상)
 ```
 
 ---
 
-## 7. 한계 & 다음 작업
+## 8. 한계 & 다음 작업
 
 - **(완료) pure-pursuit 단독 대조군** — RL이 동행형 충돌을 35%→20%로 줄임을 입증(위 Ablation).
 - 다음: 혼합 트래픽(동행+교차), 통계 유의성 검정(p-value), DQN 교차형 재학습.
@@ -166,7 +201,7 @@ ppt_dqn_slide.md              발표용 슬라이드 블록 정리 (DQN 개념·
 
 ---
 
-## 8. 엔지니어링 메모 (핵심 난관 해결)
+## 9. 엔지니어링 메모 (핵심 난관 해결)
 
 Isaac에서 cmd_vel대로 로봇을 움직이는 데 3번의 시도 끝에 해결:
 
